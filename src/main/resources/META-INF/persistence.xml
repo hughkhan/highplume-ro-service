@@ -20,7 +20,7 @@
 
           <property name="eclipselink.logging.level" value="INFO"/>
           <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver" />
-          <property name="javax.persistence.jdbc.url"    value="jdbc:postgresql://127.0.0.1:5434/highplume" />
+          <property name="javax.persistence.jdbc.url"    value="jdbc:postgresql://127.0.0.1:5432/postgres" />
           <property name="javax.persistence.jdbc.user" value="postgres" />
           <property name="javax.persistence.jdbc.password" value="Catalog1" />
 
