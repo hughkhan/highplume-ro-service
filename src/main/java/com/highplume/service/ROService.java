@@ -1244,20 +1244,23 @@ sendmailtls
   }
 
 /*-------------------------*/
-/*
+
     @GET
     @Path("test")
     @Produces("application/json")
     public String test() {
         String retStr;
 
-        double avg = getAvgGiving("1").doubleValue();
+/*         double avg = getAvgGiving("1").doubleValue();
         retStr = "getAvgGiving = " + Double.toString(avg);
         avg = getGeneralsAvg("1");
-        retStr += "\n getGeneralAvg = " + Double.toString(avg);
+        retStr += "\n getGeneralAvg = " + Double.toString(avg); */
 
+    retStr = validUserAndLevel("1", "/KkktlFEaVRL3HLWD2cRHfJ4", "201");
 
+		
     return retStr;
+	}
 /*
 IdUserNameValue test = new IdUserNameValue();
 
@@ -1663,10 +1666,69 @@ test.setId("1");
             return "ERROR: " + e.getMessage();
     }
   }
+    /*--------------------------*/
+
+  public String validUserAndLevel(String CorpID, String UserToken, String minLevel) {
+
+//	try{
+		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",UserToken).getSingleResult();
+		//String userRoleName = getRoleName(member.getRoleID());
+		Integer minLevelIntValue = Integer.valueOf(minLevel);
+		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
+		
+		if (CorpID.equals(member.getCorpID())){
+			if (userRoleIntValue <= minLevelIntValue)
+				return "ROLE LESS OR EQUAL TO MIN EXPECTED";
+//				return true;
+			else
+//				return false;				
+				return "ROLE MORE THAN MIN EXPECTED";
+		}
+		else
+		{
+//			return false;
+			return "CORPID DID NOT MATCH";
+		}
+
+/* 	} catch (NoResultException pe) {
+//            return false;
+            return "NoResultException";
+    } catch  (PersistenceException pe){
+//            return false;
+            return "PersistenceException";
+    } catch (Exception e){
+//            return false; 
+            return "Exception"; 
+    } */
+  }
 
 
     /*--------------------------*/
 
+  public String getRoleValue (String roleName){
+
+	switch(roleName) {
+		case "USER" : return "401";
+		case "DEPT-ADMIN" : return "301";
+		case "CORP-ADMIN" : return "201";
+		case "SUPER" : return "101";
+		default : return "001";
+	}
+  }
+	
+    /*--------------------------*/
+  
+  public String getRoleName (String roleValue){
+
+	switch(roleValue) {
+		case "401" : return "USER";
+		case "301" : return "DEPT-ADMIN";
+		case "201" : return "CORP-ADMIN";
+		case "101" : return "SUPER";
+		default : return "ERROR";
+	}
+  }
+	
     /*--------------------------*/
 
 
