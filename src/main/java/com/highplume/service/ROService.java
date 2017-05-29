@@ -683,11 +683,19 @@ sendmailtls
     /*------------------------*/
 
     @GET
-    @Path("corpvalues/{corpID}/{gr}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
+    @Path("corpvalues/{ID}/{userToken}/{corpID}/{gr}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
     @Produces("application/json")
-    public String getCorpValues(@PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("userID") String userID) {
+    public String getCorpValues(@PathParam("ID") String ID, @PathParam("userToken") String userToken, @PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("userID") String userID) {
         boolean forIndividualUser = (userID != null && !userID.isEmpty());
-        return _getCorpValues (corpID, gr, userID, forIndividualUser, null);
+		
+		if (forIndividualUser)
+			if (!validUserAndLevel(corpID, ID, userToken, "401"))
+				return "{\"ranking\": []}";
+		else
+			if (!validUserAndLevel(corpID, ID, userToken, "301"))
+				return "{\"ranking\": []}";
+			
+        return _getCorpValues(corpID, gr, userID, forIndividualUser, null);
     }
 
     /*------------------------*/
@@ -700,7 +708,7 @@ sendmailtls
         boolean forIndividualUser = (userID != null && !userID.isEmpty());*/
 
     public String _getCorpValues(String corpID, String gr, String userID, boolean forIndividualUser, String deptID){
-
+		
         //Get the list of all the employees in the corporation
 /*        List<Member> members = em.createNamedQuery(Member.FIND_ALL_BY_CORPID, Member.class)
 												.setParameter("corpID", corpID)
@@ -1256,7 +1264,10 @@ sendmailtls
         avg = getGeneralsAvg("1");
         retStr += "\n getGeneralAvg = " + Double.toString(avg); */
 
-    retStr = validUserAndLevel("2", "/KkktlFEaVRL3HLWD2cRHfJ4", "301");
+    if (validUserAndLevel("2", "alone@thelake.com","/KkktlFEaVRL3HLWD2cRHfJ4", "301"))
+		retStr = "True";
+	else
+		retStr = "False";
 
 		
     return retStr;
@@ -1668,13 +1679,13 @@ test.setId("1");
   }
     /*--------------------------*/
 
-  public String validUserAndLevel(String CorpID, String UserToken, String minLevel) {
+  public boolean validUserAndLevel(String CorpID, String ID, String UserToken, String minLevel) {
 	try{
 		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",UserToken).getSingleResult();
 		Integer minLevelIntValue = Integer.valueOf(minLevel);
 		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
 		
-		if (CorpID.equals(member.getCorpID())){
+		if (CorpID.equals(member.getCorpID()) && ID.equals(member.getId())){
 			if (userRoleIntValue <= minLevelIntValue)
 				return true;
 			else
