@@ -1256,7 +1256,7 @@ sendmailtls
         avg = getGeneralsAvg("1");
         retStr += "\n getGeneralAvg = " + Double.toString(avg); */
 
-    retStr = validUserAndLevel("1", "/KkktlFEaVRL3HLWD2cRHfJ4", "201");
+    retStr = validUserAndLevel("2", "/KkktlFEaVRL3HLWD2cRHfJ4", "301");
 
 		
     return retStr;
@@ -1669,37 +1669,28 @@ test.setId("1");
     /*--------------------------*/
 
   public String validUserAndLevel(String CorpID, String UserToken, String minLevel) {
-
-//	try{
+	try{
 		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",UserToken).getSingleResult();
-		//String userRoleName = getRoleName(member.getRoleID());
 		Integer minLevelIntValue = Integer.valueOf(minLevel);
 		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
 		
 		if (CorpID.equals(member.getCorpID())){
 			if (userRoleIntValue <= minLevelIntValue)
-				return "ROLE LESS OR EQUAL TO MIN EXPECTED";
-//				return true;
+				return true;
 			else
-//				return false;				
-				return "ROLE MORE THAN MIN EXPECTED";
+				return false;				
 		}
 		else
 		{
-//			return false;
-			return "CORPID DID NOT MATCH";
+			return false;
 		}
-
-/* 	} catch (NoResultException pe) {
-//            return false;
-            return "NoResultException";
+ 	} catch (NoResultException pe) {
+            return false;
     } catch  (PersistenceException pe){
-//            return false;
-            return "PersistenceException";
+            return false;
     } catch (Exception e){
-//            return false; 
-            return "Exception"; 
-    } */
+            return false; 
+    }
   }
 
 
