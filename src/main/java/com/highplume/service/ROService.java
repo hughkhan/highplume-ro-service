@@ -827,25 +827,32 @@ sendmailtls
 
 		String userRoleID = getUserRoleID(userToken);
 		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
-    		return "{\"ranking\": []}";
-
-		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
-    		return "{\"ranking\": []}";
+    		return "{\"data\": []}";
+			
+		if (diag){
+			if (!validUserAndLevel(corpID, userToken, null, "101"))
+				return "{\"data\": []}";
+		    else
+				return  _getInfluence (corpID, gr, wl, null, true, false, null);
+		}
 
 		if (forIndividualUser){
-			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID
-				return "{\"ranking\": []}";
+			if (!validUserAndLevel(corpID, userToken, userID, "401"))            //Make sure the user is not hacking in another person's ID
+				return "{\"data\": []}";
 		    else
-                return _getCorpValues(corpID, gr, userID, true, null);
+//                return _getCorpValues(corpID, gr, userID, true, null);
+				return  _getInfluence (corpID, gr, wl, userID, false, true, null);
         }
 		else if (userRoleID.equals("301")){
-            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
+//            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
+			return _getInfluence (corpID, gr, wl, null, false, false, getUserDeptID(userToken));
 		}
 		else{
 			if (!validUserAndLevel(corpID, userToken, null,"201"))
-				return "{\"ranking\": []}";
+				return "{\"data\": []}";
 		    else
-                return _getCorpValues(corpID, gr, userID, false, null);
+				return _getInfluence (corpID, gr, wl, null, false, false, null);
+//                return _getCorpValues(corpID, gr, userID, false, null);
 		}
 
         }
