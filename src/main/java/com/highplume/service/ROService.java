@@ -671,31 +671,41 @@ sendmailtls
             avg += ;
         });*/
     }
-    /*------------------------*/
+/*    *//*------------------------*//*
 
     @GET
-    @Path("corpvaluesdept/{corpID}/{gr}/{deptID}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
+    @Path("corpvaluesdept/{corpID}/{userToken}/{gr}/{deptID}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
     @Produces("application/json")
-    public String getCorpValuesDept(@PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("deptID") String deptID) {
+    public String getCorpValuesDept(@PathParam("corpID") String corpID, @PathParam("corpID") String userToken, @PathParam("gr") String gr, @PathParam("deptID") String deptID) {
         return _getCorpValues (corpID, gr, null, false, deptID);
-    }
+    }*/
 
     /*------------------------*/
 
     @GET
-    @Path("corpvalues/{ID}/{userToken}/{corpID}/{gr}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
+    @Path("corpvalues/{corpID}/{userToken}/{gr}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
     @Produces("application/json")
-    public String getCorpValues(@PathParam("ID") String ID, @PathParam("userToken") String userToken, @PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("userID") String userID) {
+    public String getCorpValues(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("gr") String gr, @PathParam("userID") String userID) {
         boolean forIndividualUser = (userID != null && !userID.isEmpty());
-		
-		if (forIndividualUser)
-			if (!validUserAndLevel(corpID, ID, userToken, "401"))
+		String userRoleID = getUserRoleID(userToken);
+		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
+    		return "{\"ranking\": []}";
+
+		if (forIndividualUser){
+			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID
 				return "{\"ranking\": []}";
-		else
-			if (!validUserAndLevel(corpID, ID, userToken, "301"))
+		    else
+                return _getCorpValues(corpID, gr, userID, true, null);
+        }
+		else if (userRoleID.equals("301")){
+            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
+		}
+		else{
+			if (!validUserAndLevel(corpID, userToken, null,"201"))
 				return "{\"ranking\": []}";
-			
-        return _getCorpValues(corpID, gr, userID, forIndividualUser, null);
+		    else
+                return _getCorpValues(corpID, gr, userID, false, null);
+		}
     }
 
     /*------------------------*/
@@ -778,8 +788,8 @@ sendmailtls
         }
         else {
             for (int i=0; i<users.size(); i++){
-                if (deptUserIds.contains(users.get(i).getId()) || deptID == null){      //if deptID != null then restricted by dept(dept admin).  if null then return all(corp admin)
-                    IdUserNameValue user = _getPercentRank(users, users.get(i).getId());
+                if (deptUserIds.contains(users.get(i).getId()) || deptID == null){         //if deptID != null then restricted by dept(dept admin).  if null then return all(corp admin).
+                    IdUserNameValue user = _getPercentRank(users, users.get(i).getId());   //Have to do it this way instead of in via db joins since measuring dept members against all corp employees
                     retStr += "{\"ID\": \"" + user.getId() +
                            "\", \"nameFirst\": \"" + user.getNameFirst() +
                            "\", \"nameMiddle\": \"" + user.getNameMiddle() +
@@ -807,13 +817,37 @@ sendmailtls
         }
     /*------------------------*/
     @GET
-    @Path("influence/{corpID}/{gr}/{wl}/{userID: .*}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back % ranking only
+    @Path("influence/{corpID}/{userToken}/{gr}/{wl}/{userID: .*}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back % ranking only
 //    @Path("influence/{corpID}/{gr}/{wl}/{userID:(/[^/]+?)?}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back decile only
     @Produces("application/json")
-    public String getInfluence(@PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("wl") String wl, @PathParam("userID") String userID) {
+    public String getInfluence(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("gr") String gr, @PathParam("wl") String wl, @PathParam("userID") String userID) {
         boolean diag = (userID != null && !userID.isEmpty() && userID.equalsIgnoreCase("diagnostics"));
         boolean forIndividualUser = (userID != null && !userID.isEmpty());      //value was passed in.  Presumably userID.
-        return _getInfluence (corpID, gr, wl, userID, diag, forIndividualUser, null);
+//        return _getInfluence (corpID, gr, wl, userID, diag, forIndividualUser, null);
+
+		String userRoleID = getUserRoleID(userToken);
+		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
+    		return "{\"ranking\": []}";
+
+		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
+    		return "{\"ranking\": []}";
+
+		if (forIndividualUser){
+			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID
+				return "{\"ranking\": []}";
+		    else
+                return _getCorpValues(corpID, gr, userID, true, null);
+        }
+		else if (userRoleID.equals("301")){
+            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
+		}
+		else{
+			if (!validUserAndLevel(corpID, userToken, null,"201"))
+				return "{\"ranking\": []}";
+		    else
+                return _getCorpValues(corpID, gr, userID, false, null);
+		}
+
         }
 
     /*------------------------*/
@@ -1257,18 +1291,22 @@ sendmailtls
     @Path("test")
     @Produces("application/json")
     public String test() {
-        String retStr;
+        String retStr = "";
 
 /*         double avg = getAvgGiving("1").doubleValue();
         retStr = "getAvgGiving = " + Double.toString(avg);
         avg = getGeneralsAvg("1");
         retStr += "\n getGeneralAvg = " + Double.toString(avg); */
 
-    if (validUserAndLevel("2", "alone@thelake.com","/KkktlFEaVRL3HLWD2cRHfJ4", "301"))
+    byte[] encodedBytes = Base64.getEncoder().encode("Test".getBytes());
+
+/*
+    if (validUserAndLevel("1","L0tra3RsRkVhVlJMM0hMV0QyY1JIZko0", "401"))
 		retStr = "True";
 	else
 		retStr = "False";
-
+*/
+//retStr = validUserAndLevel("1","L0tra3RsRkVhVlJMM0hMV0QyY1JIZko0", "401")
 		
     return retStr;
 	}
@@ -1679,28 +1717,41 @@ test.setId("1");
   }
     /*--------------------------*/
 
-  public boolean validUserAndLevel(String CorpID, String ID, String UserToken, String minLevel) {
+  public boolean validUserAndLevel(String CorpID, String userTokenBase64, String userID, String minLevel) {
 	try{
-		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",UserToken).getSingleResult();
+        byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
+        String userToken = new String(decodedPWD);
+
+		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
 		Integer minLevelIntValue = Integer.valueOf(minLevel);
 		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
-		
-		if (CorpID.equals(member.getCorpID()) && ID.equals(member.getId())){
+
+		if (userID != null)
+		    if (!(member.getId().equals(userID)))
+                return false;                           //ID did not match record pulled up using userToken.  Possible hack.
+
+		if (CorpID.equals(member.getCorpID())){
 			if (userRoleIntValue <= minLevelIntValue)
 				return true;
+//			    return "min level passed";
 			else
-				return false;				
+				return false;
+//			    return "min level failed";
 		}
 		else
 		{
 			return false;
+//			    return "corp id mismatch";
 		}
  	} catch (NoResultException pe) {
             return false;
+//			    return "NoResultException";
     } catch  (PersistenceException pe){
             return false;
+//			    return "PersistenceException";
     } catch (Exception e){
-            return false; 
+            return false;
+//			    return "Exception";
     }
   }
 
@@ -1733,8 +1784,43 @@ test.setId("1");
 	
     /*--------------------------*/
 
+  public String getUserRoleID(String userTokenBase64) {
+	try{
+        byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
+        String userToken = new String(decodedPWD);
 
+		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
+		return member.getRoleID();
 
+ 	} catch (NoResultException pe) {
+            return "Error:No Record Found. " + pe.getMessage();
+    } catch  (PersistenceException pe){
+            return "Error:" + pe.getMessage();
+    } catch (Exception e){
+            return "Error: " + e.getMessage();
+    }
+  }
+
+    /*--------------------------*/
+
+  public String getUserDeptID(String userTokenBase64) {
+	try{
+        byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
+        String userToken = new String(decodedPWD);
+
+		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
+		return member.getDepartmentID();
+
+ 	} catch (NoResultException pe) {
+            return "Error:No Record Found. " + pe.getMessage();
+    } catch  (PersistenceException pe){
+            return "Error:" + pe.getMessage();
+    } catch (Exception e){
+            return "Error: " + e.getMessage();
+    }
+  }
+
+    /*--------------------------*/
 
 }
 
