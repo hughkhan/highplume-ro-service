@@ -60,8 +60,15 @@ public class ROService {
    * XML  : curl -X GET -H "Accept: application/xml" http://localhost:8080/chapter15-service-1.0/rs/members -v
    */
   @GET
-  @Path("members")
-  public Response getAllMembers() {
+  @Path("members/{corpID}/{userToken}")
+  public Response getAllMembers(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
+
+    if (!validUserAndLevel(corpID, userToken, null,"201"))
+    {
+        return Response.status(500)
+                        .entity("<html lang=\"en\"><body><h1>  ERROR:  Unauthorized  </h1></body></html>\"")
+                        .build();
+    }
     TypedQuery<Member> query = em.createNamedQuery(Member.FIND_ALL, Member.class);
     Members members = new Members(query.getResultList());
     return Response.ok(members).build();
@@ -688,11 +695,12 @@ sendmailtls
     public String getCorpValues(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("gr") String gr, @PathParam("userID") String userID) {
         boolean forIndividualUser = (userID != null && !userID.isEmpty());
 		String userRoleID = getUserRoleID(userToken);
-		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
+
+		if (userRoleID.substring(0,1).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
     		return "{\"ranking\": []}";
 
 		if (forIndividualUser){
-			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID
+			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID by sending in userID
 				return "{\"ranking\": []}";
 		    else
                 return _getCorpValues(corpID, gr, userID, true, null);
@@ -808,13 +816,13 @@ sendmailtls
         return retStr;
     }
     /*------------------------*/
-    @GET
+/*    @GET
     @Path("influencedept/{corpID}/{gr}/{wl}/{deptID}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back % ranking only
 //    @Path("influence/{corpID}/{gr}/{wl}/{userID:(/[^/]+?)?}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back decile only
     @Produces("application/json")
     public String getInfluenceDept(@PathParam("corpID") String corpID, @PathParam("gr") String gr, @PathParam("wl") String wl, @PathParam("deptID") String deptID) {
         return _getInfluence (corpID, gr, wl, null, false, false, deptID);
-        }
+        }*/
     /*------------------------*/
     @GET
     @Path("influence/{corpID}/{userToken}/{gr}/{wl}/{userID: .*}") //corpID -- Giver or Receiver -- Wider appeal or Local appeal -- user for whom to send back % ranking only
@@ -826,7 +834,7 @@ sendmailtls
 //        return _getInfluence (corpID, gr, wl, userID, diag, forIndividualUser, null);
 
 		String userRoleID = getUserRoleID(userToken);
-		if (userRoleID.substring(0,2).equalsIgnoreCase("Err")) //Record not found in db.  Possible hack.
+		if (userRoleID.substring(0,1).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
     		return "{\"data\": []}";
 			
 		if (diag){
@@ -837,14 +845,12 @@ sendmailtls
 		}
 
 		if (forIndividualUser){
-			if (!validUserAndLevel(corpID, userToken, userID, "401"))            //Make sure the user is not hacking in another person's ID
+			if (!validUserAndLevel(corpID, userToken, userID, "401"))            //Make sure the user is not hacking in another person's ID by sending in supplied userID
 				return "{\"data\": []}";
 		    else
-//                return _getCorpValues(corpID, gr, userID, true, null);
 				return  _getInfluence (corpID, gr, wl, userID, false, true, null);
         }
 		else if (userRoleID.equals("301")){
-//            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
 			return _getInfluence (corpID, gr, wl, null, false, false, getUserDeptID(userToken));
 		}
 		else{
@@ -852,7 +858,6 @@ sendmailtls
 				return "{\"data\": []}";
 		    else
 				return _getInfluence (corpID, gr, wl, null, false, false, null);
-//                return _getCorpValues(corpID, gr, userID, false, null);
 		}
 
         }
@@ -1222,13 +1227,22 @@ sendmailtls
     /*----------------------------*/
 
   @GET
-  @Path("getstars/{corpID}/{givingOrReceiving}/{deptID: .*}")
+  @Path("getstars/{corpID}/{userToken}/{givingOrReceiving}")
   @Produces("application/json")
 //  public Response getStars() {
-  public String getStars(@PathParam("corpID") String corpID,  @PathParam("givingOrReceiving") String givingOrReceiving, @PathParam("deptID") String deptID) {
-    String queryStr,retStr="{\"data\": [";
+  public String getStars(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("givingOrReceiving") String givingOrReceiving) {
+    String queryStr,deptID="",retStr="{\"data\": [";
 
-    boolean deptRestricted = (deptID != null && !deptID.isEmpty());
+	if (!validUserAndLevel(corpID, userToken, null,"301"))            //Make sure the user is at least a dept admin
+		return retStr + "]}";
+
+	String userRoleID = getUserRoleID(userToken);
+	boolean deptRestricted = false;
+	if (userRoleID.equals("301"))
+    {
+	    deptRestricted = true;
+	    deptID = getUserDeptID(userToken);
+    }
 
     try{
         if (givingOrReceiving.equalsIgnoreCase("R")) {
@@ -1740,30 +1754,60 @@ test.setId("1");
 		if (CorpID.equals(member.getCorpID())){
 			if (userRoleIntValue <= minLevelIntValue)
 				return true;
-//			    return "min level passed";
 			else
 				return false;
-//			    return "min level failed";
 		}
 		else
 		{
 			return false;
-//			    return "corp id mismatch";
 		}
  	} catch (NoResultException pe) {
             return false;
-//			    return "NoResultException";
     } catch  (PersistenceException pe){
             return false;
-//			    return "PersistenceException";
     } catch (Exception e){
             return false;
-//			    return "Exception";
     }
   }
 
 
     /*--------------------------*/
+/*
+public boolean validDeptAndLevel(String CorpID, String userTokenBase64, String deptID, String minLevel) {
+	try{
+        byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
+        String userToken = new String(decodedPWD);
+
+		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
+		Integer minLevelIntValue = Integer.valueOf(minLevel);
+		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
+
+        if (member.getRoleID().equals("301"))
+            if (!member.getDepartmentID().equals(deptID))       //Dept admin hacking to see another dept
+                return false;
+
+		if (CorpID.equals(member.getCorpID())){
+			if (userRoleIntValue <= minLevelIntValue)
+				return true;
+			else
+				return false;
+		}
+		else
+		{
+			return false;
+		}
+ 	} catch (NoResultException pe) {
+            return false;
+    } catch  (PersistenceException pe){
+            return false;
+    } catch (Exception e){
+            return false;
+    }
+  }*/
+
+
+    /*--------------------------*/
+
 
   public String getRoleValue (String roleName){
 
