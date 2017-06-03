@@ -224,9 +224,7 @@ sendmailtls
 
     /*------------------------*/
 
-
-
-  @GET
+/*  @GET
   @Path("usersbycorp/{corpID}/{userToken}")
   @Produces("application/json")
   public String getAllUsersByCorp(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
@@ -256,7 +254,7 @@ sendmailtls
     retStr += "]}";
 
     return retStr;
-  }
+  }*/
 
     /*------------------------*/
 
@@ -271,12 +269,12 @@ sendmailtls
 
 
   @GET
-  @Path("usersbydept/{corpID}/{departmentID}")
+  @Path("usersbydept/{corpID}/{userToken}/{departmentID}")
   @Produces("application/json")
-  public String getAllUsersByDept(@PathParam("corpID") String corpID, @PathParam("departmentID") String departmentID) {
+  public String getAllUsersByDept(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("departmentID") String departmentID) {
 
-//    TypedQuery<Member> memQuery = em.createNamedQuery(Member.FIND_ALL_BY_DEPTID, Member.class).setParameter("departmentID", departmentID);
-//    List<Member> members = memQuery.getResultList();
+    if (!validUserAndLevel(corpID, userToken, null, "401"))
+		return "{\"users\": []}";
 
 	List<Member> members = _usersByDept(corpID, departmentID);
 
@@ -303,11 +301,14 @@ sendmailtls
 
     /*------------------------*/
     @GET
-    @Path("deptuserdata/{corpID}")
+    @Path("deptuserdata/{corpID}/{userToken}")
     @Produces("application/json")
-    public String getdDeptUserData(@PathParam("corpID") String corpID) {    //Data about each department
+    public String getdDeptUserData(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {    //Data about each department
         DecimalFormat formatter = new DecimalFormat("#0.00");
         String retStr="{\"data\": {\"giver\": [";
+
+        if (!validUserAndLevel(corpID, userToken, null, "201"))
+		    return "{\"data\": {\"giver\": []}}";
 
   		List<DeptCorp> departments = _deptByCorp(corpID);
 //        List<Member>[] membersPerDept = (List<Member>[])new Object[departments.size()];
@@ -378,19 +379,27 @@ sendmailtls
     /*------------------------*/
 
     @GET
-    @Path("giver/{corpID}/{receiverID}")
+    @Path("giver/{corpID}/{userToken}/{receiverID}")
     @Produces("application/json")
-    public String getGivers(@PathParam("corpID") String corpID, @PathParam("receiverID") String receiverID) {
+    public String getGivers(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("receiverID") String receiverID) {
         String queryStr, retStr="{\"data\": [";
 
-    //            queryStr = "SELECT MEMBER.NAMEFIRST, MEMBER.NAMELAST, COUNT(RECEIVINGMEMBERID) AS NUMOFSTARSREC FROM STARGIVEN INNER JOIN MEMBER ON RECEIVINGMEMBERID = MEMBER.ID GROUP BY MEMBER.NAMEFIRST, MEMBER.NAMELAST";
+        if (!validUserAndLevel(corpID, userToken, null,"301"))            //Make sure the user is at least a dept admin
+            return "{\"data\": []}";
+
+        String deptRestrictionClause = "";
+        if (getUserRoleID(userToken).equals("301"))
+            deptRestrictionClause = "AND RECEIVINGMEMBER.DEPARTMENTID = '" + getUserDeptID(userToken) + "' ";
+
         queryStr = "SELECT MEMBER.ID, MEMBER.NAMEFIRST, MEMBER.NAMEMIDDLE, MEMBER.NAMELAST, COUNT(GIVINGMEMBERID) AS NUMOFSTARSGIVEN " +
                 "FROM STARGIVEN " +
                 "INNER JOIN MEMBER ON GIVINGMEMBERID = MEMBER.ID " +
+                "INNER JOIN MEMBER AS RECEIVINGMEMBER ON STARGIVEN.RECEIVINGMEMBERID = RECEIVINGMEMBER.ID " +
                 "INNER JOIN TU ON STARGIVEN.TUTYPEID = TU.TUTYPEID " +
                 "INNER JOIN TUCOMPOSITE ON TUCOMPOSITE.ID = TU.TUCOMPOSITEID " +
                 "WHERE STARGIVEN.receivingmemberid = '" + receiverID + "' "  +
                 "AND MEMBER.CORPID = '" + corpID + "' "  +
+                deptRestrictionClause +
                 "AND TUCOMPOSITE.CORPID = '" + corpID + "' "  +
                 "AND TUCOMPOSITE.ACTIVE = true " +
                 "GROUP BY MEMBER.ID, MEMBER.NAMEFIRST, MEMBER.NAMELAST, MEMBER.NAMEMIDDLE " +
@@ -410,19 +419,27 @@ sendmailtls
     /*------------------------*/
 
     @GET
-    @Path("receivers/{corpID}/{giverID}")
+    @Path("receivers/{corpID}/{userToken}/{giverID}")
     @Produces("application/json")
-    public String getReceivers(@PathParam("corpID") String corpID, @PathParam("giverID") String giverID) {
+    public String getReceivers(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("giverID") String giverID) {
         String queryStr, retStr="{\"data\": [";
 
-//            queryStr = "SELECT MEMBER.NAMEFIRST, MEMBER.NAMELAST, COUNT(RECEIVINGMEMBERID) AS NUMOFSTARSREC FROM STARGIVEN INNER JOIN MEMBER ON RECEIVINGMEMBERID = MEMBER.ID GROUP BY MEMBER.NAMEFIRST, MEMBER.NAMELAST";
+        if (!validUserAndLevel(corpID, userToken, null,"301"))            //Make sure the user is at least a dept admin
+            return "{\"data\": []}";
+
+        String deptRestrictionClause = "";
+        if (getUserRoleID(userToken).equals("301"))
+            deptRestrictionClause = "AND GIVINGMEMBER.DEPARTMENTID = '" + getUserDeptID(userToken) + "' ";
+
         queryStr = "SELECT MEMBER.ID, MEMBER.NAMEFIRST, MEMBER.NAMEMIDDLE, MEMBER.NAMELAST, COUNT(RECEIVINGMEMBERID) AS NUMOFSTARSRECEIVED " +
                 "FROM STARGIVEN " +
                 "INNER JOIN MEMBER ON RECEIVINGMEMBERID = MEMBER.ID " +
+                "INNER JOIN MEMBER AS GIVINGMEMBER ON STARGIVEN.GIVINGMEMBERID = GIVINGMEMBER.ID " +
                 "INNER JOIN TU ON STARGIVEN.TUTYPEID = TU.TUTYPEID " +
                 "INNER JOIN TUCOMPOSITE ON TUCOMPOSITE.ID = TU.TUCOMPOSITEID " +
                 "WHERE STARGIVEN.givingmemberid = '" + giverID + "' "  +
                 "AND MEMBER.CORPID = '" + corpID + "' "  +
+                deptRestrictionClause +
                 "AND TUCOMPOSITE.CORPID = '" + corpID + "' "  +
                 "AND TUCOMPOSITE.ACTIVE = true " +
                 "GROUP BY MEMBER.ID, MEMBER.NAMEFIRST, MEMBER.NAMELAST, MEMBER.NAMEMIDDLE " +
@@ -1202,12 +1219,14 @@ sendmailtls
     /*------------------------*/
 
     @GET
-    @Path("depttotals/{corpID}")
+    @Path("depttotals/{corpID}/{userToken}")
     @Produces("application/json")
-    public String getDeptTotals(@PathParam("corpID") String corpID) {
+    public String getDeptTotals(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
         String retStr="{\"data\": {\"giver\": [";
 
-//        List<Object[]> results = em.createNativeQuery(queryStr).getResultList();
+    	if (!validUserAndLevel(corpID, userToken, null,"201"))            //Make sure the user is at least a dept admin
+	    	return "{\"data\": {\"giver\": []}}";
+
         List<Object[]> results = _deptGiverTotals(corpID);
 
         for (int i=0; i < results.size(); i++) {
@@ -1438,9 +1457,9 @@ test.setId("1");
   /*--------------------------*/
 
   @GET
-  @Path("getactivequalities/{corpID}")
+  @Path("getactivequalities/{corpID}/{userToken}")
   @Produces("application/json")
-  public String getActiveQualities(@PathParam("corpID") String corpID) {
+  public String getActiveQualities(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
 /*
 {
 	"qualities": [{
@@ -1462,7 +1481,10 @@ test.setId("1");
 	}]
 }
  */
- 
+
+    if (!validUserAndLevel(corpID, userToken, null, "401"))
+		return "{\"qualities\": [{}]}";
+
 	String retStr = "{\"qualities\": [{";
 	
 	try{
@@ -1490,9 +1512,9 @@ test.setId("1");
   /*--------------------------*/
 
   @GET
-  @Path("getqualitiescomposite/{corpID}")
+  @Path("getqualitiescomposite/{corpID}/{userToken}")
   @Produces("application/json")
-  public String getQualitiesComposite(@PathParam("corpID") String corpID) {
+  public String getQualitiesComposite(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
 /*
 {
    "qualities":{
@@ -1571,6 +1593,10 @@ test.setId("1");
                         "}" +
                     "}";*/
 
+
+    if (!validUserAndLevel(corpID, userToken, null, "201"))
+		return "{\"qualities\": {}}";
+
     String retStr = "{\"qualities\": {" +
                         "\"activecompid\": ";
 	try{
@@ -1620,59 +1646,6 @@ test.setId("1");
 
   /*--------------------------*/
 
-    @POST
-    @Path("userinfo")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @Produces(MediaType.APPLICATION_JSON)
-    public String userInfo(String message) {
-    String[] msgChunk = message.split(","); //0=corpID,1=ID,2=param
-        String  corpID  = msgChunk[0],
-                ID      = msgChunk[1],
-                param   = msgChunk[2];
-        try{
-            TypedQuery<Member> query = em.createNamedQuery(Member.FIND_BY_ID, Member.class).setHint(QueryHints.CACHE_USAGE, CacheUsage.DoNotCheckCache).setParameter("id",ID);
-            Member member = query.getSingleResult();
-
-            if(param.equals("get")){
-                String retStr="{\"user\": ";
-                retStr += "{\"ID\": \"" + member.getId()+
-                        "\", \"nameFirst\": \"" + member.getnameFirst() +
-                        "\", \"nameMiddle\": \"" + member.getnameMiddle() +
-                        "\", \"nameLast\": \"" + member.getnameLast() +
-                        "\", \"userID\": \"" + member.getUserID() +
-                        "\", \"corpID\": \"" + member.getCorpID() +
-                        "\", \"email\": \"" + member.getEmail() +
-                        "\", \"department\": \"" + member.getDepartmentID() +
-                        "\", \"roleID\": \"" + member.getRoleID() +
-                        "\", \"active\": \"" + member.getActive() +
-                        "\"}";
-                retStr += "}";
-                return retStr;
-            }
-            else if (param.equals("set")){
-                if (!corpID.equals(member.getCorpID()))
-                    return "ERROR: Corp ID does not match!";
-                else{
-                    member.setnameFirst(msgChunk[3]);
-                    member.setnameMiddle(msgChunk[4]);
-                    member.setnameLast(msgChunk[5]);
-                    member.setEmail(msgChunk[6]);
-                    em.persist(member);
-                    return "SUCCESS";
-                }
-            }
-            else
-                return "ERROR:  wrong param or missing";
-
-        } catch (PersistenceException pe) {
-            return "ERROR: " + pe.getMessage();
-        }
-    }
-
-
-    /*--------------------------*/
-
-
   public List<DeptCorp> _deptByCorp(String corpID) {
 	TypedQuery<DeptCorp> dpquery = em.createNamedQuery(DeptCorp.FIND_ALL_BY_CORPID, DeptCorp.class).setParameter("corpID",corpID);
 	return dpquery.getResultList();
@@ -1680,16 +1653,47 @@ test.setId("1");
 
 	/*--------------------------*/
 
+  public String _getCorpIDFromUID(String userID){
+
+    String[] _messageChunks = userID.split("@");
+
+	try{
+		TypedQuery<CorpAllowedURLs> query = em.createNamedQuery(CorpAllowedURLs.FIND_CORPID_BY_URL, CorpAllowedURLs.class)
+                .setParameter("allowedURL",_messageChunks[_messageChunks.length-1].toLowerCase());  //only compare the part after the @ sign
+		CorpAllowedURLs corpAllowedURLs = query.getSingleResult();
+		return corpAllowedURLs.getCorpID();
+
+	} catch (NoResultException pe) {
+            return "NO RESULT";
+    } catch  (PersistenceException pe){
+            return "ERROR: " + pe.getMessage();
+    } catch (Exception e){
+            return "ERROR: " + e.getMessage();
+    }
+}
+
+	/*--------------------------*/
+
   @POST
   @Path("getdeptbycorp")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.TEXT_PLAIN)
-  public String getDeptByCorp(String corpID) {
+  public String getDeptByCorp(String message) {
 
+    String[] msgChunk = message.split(",");                                     //0=corpID,1=userToken
+    String  corpID      = msgChunk[0],
+            userToken   = msgChunk[1];
 	try{
+        if (!userToken.equals("NOTOKENYET")){                                        //If registering
+            if (!validUserAndLevel(corpID, userToken, null, "401"))
+  	    	    return "ERROR: Not Authorized";
+        }
+        else{
+            corpID = _getCorpIDFromUID(msgChunk[0]);
+            if (corpID.equalsIgnoreCase("NO RESULT"))
+                return "{\"departments\": []}";
+        }
 
-//		TypedQuery<DeptCorp> dpquery = em.createNamedQuery(DeptCorp.FIND_ALL_BY_CORPID, DeptCorp.class).setParameter("corpID",corpID);
-//		List<DeptCorp> deptcorp = dpquery.getResultList();
 		List<DeptCorp> deptcorp = _deptByCorp(corpID);
 
 		String retStr="{\"departments\": [";
@@ -1699,7 +1703,7 @@ test.setId("1");
 					"\", \"department\": \"" + deptcorp.get(i).getDeptName() +
 					"\"},";
 		}
-        if (deptcorp.size() != 0) retStr = retStr.substring(0, retStr.length()-1); //remove the last extra comma
+        if (deptcorp.size() != 0) retStr = retStr.substring(0, retStr.length()-1);  //remove the last extra comma
         retStr += "]}";
 		return retStr;
 	} catch (NoResultException pe) {
@@ -1715,17 +1719,23 @@ test.setId("1");
 
 
   @POST
-  @Path("getcorpid")
+  @Path("corpregistered")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.TEXT_PLAIN)
   public String GetCorpID(String message) {
 
-	try{
+    String result = _getCorpIDFromUID(message);
+    if (result.equalsIgnoreCase("NO RESULT"))
+        return result;
+    else
+        return "REGISTERED";
+
+/*	try{
 		String[] _messageChunks = message.split("@");
 		TypedQuery<CorpAllowedURLs> query = em.createNamedQuery(CorpAllowedURLs.FIND_CORPID_BY_URL, CorpAllowedURLs.class)
                 .setParameter("allowedURL",_messageChunks[_messageChunks.length-1].toLowerCase());  //only compare the part after the @ sign
 		CorpAllowedURLs corpAllowedURLs = query.getSingleResult();
-
+        return "SUCCESS";
 		String retStr="{\"urls\": [{\"corpID\": \"" + corpAllowedURLs.getCorpID()+
 					"\", \"allowedURL\": \"" + corpAllowedURLs.getAllowedURL() +
 					"\"}]}";
@@ -1738,7 +1748,7 @@ test.setId("1");
             return "ERROR: " + pe.getMessage();
     } catch (Exception e){
             return "ERROR: " + e.getMessage();
-    }
+    }*/
   }
     /*--------------------------*/
 
