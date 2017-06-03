@@ -75,14 +75,17 @@ public class ROService {
   }
 /*------------------------*/
   @GET
-  @Path("users")
+  @Path("users/{corpID}/{userToken}")
   @Produces("application/json")
-  public String getAllUsers() {
+  public String getAllUsers(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
     TypedQuery<Member> memQuery = em.createNamedQuery(Member.FIND_ALL, Member.class);
     List<Member> members = memQuery.getResultList();
 
+    if (!validUserAndLevel(corpID, userToken, null,"201"))
+		return "{\"users\": []}";
+		
     String retStr="{\"users\": [";
-
+		
     for (int i=0; i < members.size(); i++) {
       retStr += "{\"ID\": \"" + members.get(i).getId()+
                 "\", \"nameFirst\": \"" + members.get(i).getnameFirst() +
@@ -224,12 +227,13 @@ sendmailtls
 
 
   @GET
-  @Path("usersbycorp/{corpID}")
+  @Path("usersbycorp/{corpID}/{userToken}")
   @Produces("application/json")
-  public String getAllUsersByCorp(@PathParam("corpID") String corpID) {
+  public String getAllUsersByCorp(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
 
-//    TypedQuery<Member> memQuery = em.createNamedQuery(Member.FIND_ALL_BY_DEPTID, Member.class).setParameter("departmentID", departmentID);
-//    List<Member> members = memQuery.getResultList();
+    if (!validUserAndLevel(corpID, userToken, null, "201"))
+		return "{\"users\": []}";
+	
     List<Member> members = em.createNamedQuery(Member.FIND_ALL_BY_CORPID, Member.class)
 												.setParameter("corpID", corpID)
 												.getResultList();
