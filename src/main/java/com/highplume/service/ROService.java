@@ -717,7 +717,7 @@ sendmailtls
         boolean forIndividualUser = (userID != null && !userID.isEmpty());
 		String userRoleID = getUserRoleID(userToken);
 
-		if (userRoleID.substring(0,1).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
+		if (userRoleID.substring(0,2).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
     		return "{\"ranking\": []}";
 
 		if (forIndividualUser){
@@ -855,7 +855,7 @@ sendmailtls
 //        return _getInfluence (corpID, gr, wl, userID, diag, forIndividualUser, null);
 
 		String userRoleID = getUserRoleID(userToken);
-		if (userRoleID.substring(0,1).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
+		if (userRoleID.substring(0,2).equalsIgnoreCase("Er")) //Record not found in db.  Possible hack.
     		return "{\"data\": []}";
 			
 		if (diag){
@@ -1421,9 +1421,9 @@ test.setId("1");
   /*--------------------------*/
 
   @GET
-  @Path("getqualities/{corpID}")
+  @Path("getqualities/{corpID}/{userToken}")
   @Produces("application/json")
-  public String getQualities(@PathParam("corpID") String corpID) {
+  public String getQualities(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken) {
 /*
 {
 	"qualities": [{
@@ -1437,7 +1437,10 @@ test.setId("1");
 	}]
 }
  */
-    List<TUType> tut = em.createNamedQuery(TUType.FIND_ALL, TUType.class).getResultList();
+    if (!validUserAndLevel(corpID, userToken, null, "301"))
+		return "{\"qualities\": [{}]}";
+
+	List<TUType> tut = em.createNamedQuery(TUType.FIND_ALL, TUType.class).getResultList();
 
     String retStr = "{\"qualities\": [{";
 
