@@ -1501,6 +1501,8 @@ test.setId("1");
 			if (i+1 != tus.size() )
 				retStr += "}, {";
 		}
+    } catch (NoResultException pe) {
+		return "{\"qualities\": [{}]}";
 	} catch (PersistenceException pe) {
 		return "FAIL: " + pe.getMessage();
 	}
@@ -1638,6 +1640,8 @@ test.setId("1");
     retStr +=               "}]";
     retStr +=           "}";
     retStr +=        "}";
+    } catch (NoResultException pe) {
+		return "{\"qualities\": [{}]}";
 	} catch (PersistenceException pe) {
 		return "FAIL: " + pe.getMessage();
 	}
@@ -1670,7 +1674,7 @@ test.setId("1");
     } catch (Exception e){
             return "ERROR: " + e.getMessage();
     }
-}
+  }
 
 	/*--------------------------*/
 
@@ -1682,10 +1686,10 @@ test.setId("1");
 
     String[] msgChunk = message.split(",");                                     //0=corpID,1=userToken
     String  corpID      = msgChunk[0],
-            userToken   = msgChunk[1];
+            userTokenB64   = msgChunk[1];
 	try{
-        if (!userToken.equals("NOTOKENYET")){                                        //If registering
-            if (!validUserAndLevel(corpID, userToken, null, "401"))
+        if (!userTokenB64.equals("NOTOKENYET")){                                        //If registering
+            if (!validUserAndLevel(corpID, userTokenB64, null, "401"))
   	    	    return "ERROR: Not Authorized";
         }
         else{
@@ -1707,7 +1711,7 @@ test.setId("1");
         retStr += "]}";
 		return retStr;
 	} catch (NoResultException pe) {
-            return "NO RESULT";
+            return "{\"departments\": []}";
     } catch  (PersistenceException pe){
             return "ERROR: " + pe.getMessage();
     } catch (Exception e){
@@ -1729,30 +1733,11 @@ test.setId("1");
         return result;
     else
         return "REGISTERED";
-
-/*	try{
-		String[] _messageChunks = message.split("@");
-		TypedQuery<CorpAllowedURLs> query = em.createNamedQuery(CorpAllowedURLs.FIND_CORPID_BY_URL, CorpAllowedURLs.class)
-                .setParameter("allowedURL",_messageChunks[_messageChunks.length-1].toLowerCase());  //only compare the part after the @ sign
-		CorpAllowedURLs corpAllowedURLs = query.getSingleResult();
-        return "SUCCESS";
-		String retStr="{\"urls\": [{\"corpID\": \"" + corpAllowedURLs.getCorpID()+
-					"\", \"allowedURL\": \"" + corpAllowedURLs.getAllowedURL() +
-					"\"}]}";
-
-		return retStr;
-
-	} catch (NoResultException pe) {
-            return "NO RESULT";
-    } catch  (PersistenceException pe){
-            return "ERROR: " + pe.getMessage();
-    } catch (Exception e){
-            return "ERROR: " + e.getMessage();
-    }*/
   }
+
     /*--------------------------*/
 
-  public boolean validUserAndLevel(String CorpID, String userTokenBase64, String userID, String minLevel) {
+  public boolean validUserAndLevel(String CorpID, String userTokenBase64, String userID, String minLevel) {  //userID='id' in member table
 	try{
         byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
         String userToken = new String(decodedPWD);
