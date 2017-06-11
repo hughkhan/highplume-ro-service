@@ -597,7 +597,7 @@ sendmailtls
 
     /*------------------------*/
 
-    public double _giverValuesRanking(String corpID, String userID) {
+    public double _giverValuesRanking(String corpID, String userID, String valueID) {
 
 /*        String queryStr =
                 "SELECT QUALITY.ID, QUALITY.NAME, COUNT(STARGIVEN.TUTYPEID) " +
@@ -607,7 +607,11 @@ sendmailtls
                 "WHERE STARGIVEN.GIVINGMEMBERID = '" + userID + "' " +
                 "AND RECEIVINGMEMBER.CORPID = '" + corpID + "' " +
                 "GROUP BY QUALITY.ID, QUALITY.NAME, STARGIVEN.TUTYPEID";*/
-
+				
+		String byValueClause = "";
+		if (!valueID.equals("-1")){
+			byValueClause = "AND TUTYPE.ID = '" + valueID + "' ";
+		}
         String queryStr =
                 "SELECT TU.RATIO, COUNT(STARGIVEN.TUTYPEID), TUTYPE.NAME " +
                 "FROM STARGIVEN " +
@@ -619,6 +623,7 @@ sendmailtls
                 "AND RECEIVINGMEMBER.CORPID = '" + corpID + "' " +
                 "AND TUCOMPOSITE.CORPID = '" + corpID + "' " +
                 "AND TUCOMPOSITE.ACTIVE = true " +
+				byValueClause +
                 "GROUP BY TU.RATIO, STARGIVEN.TUTYPEID, TUTYPE.NAME";
 
         List<Object[]> valueTotals = em.createNativeQuery(queryStr).getResultList();
@@ -644,8 +649,12 @@ sendmailtls
 
     /*------------------------*/
 
-    public double _ReceiverValuesRanking(String corpID, String userID) {
+    public double _ReceiverValuesRanking(String corpID, String userID, String valueID) {
 
+		String byValueClause = "";
+		if (!valueID.equals("-1")){
+			byValueClause = "AND TUTYPE.ID = '" + valueID + "' ";
+		}
         String queryStr =
                 "SELECT TU.RATIO, COUNT(STARGIVEN.TUTYPEID), TUTYPE.NAME " +
                 "FROM STARGIVEN " +
@@ -657,6 +666,7 @@ sendmailtls
                 "AND GIVINGMEMBER.CORPID = '" + corpID + "' " +
                 "AND TUCOMPOSITE.CORPID = '" + corpID + "' " +
                 "AND TUCOMPOSITE.ACTIVE = true " +
+				byValueClause +
                 "GROUP BY TU.RATIO, STARGIVEN.TUTYPEID, TUTYPE.NAME ";
 
         List<Object[]> valueTotals = em.createNativeQuery(queryStr).getResultList();
@@ -711,9 +721,10 @@ sendmailtls
     /*------------------------*/
 
     @GET
-    @Path("corpvalues/{corpID}/{userToken}/{gr}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
+    @Path("corpvalues/{corpID}/{userToken}/{gr}/{valueID}/{userID: .*}") //corpID -- Giver or Receiver -- user, if present, for whom to send back % ranking only
     @Produces("application/json")
-    public String getCorpValues(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, @PathParam("gr") String gr, @PathParam("userID") String userID) {
+    public String getCorpValues(@PathParam("corpID") String corpID, @PathParam("userToken") String userToken, 
+								@PathParam("gr") String gr, @PathParam("valueID") String valueID, @PathParam("userID") String userID) {
         boolean forIndividualUser = (userID != null && !userID.isEmpty());
 		String userRoleID = getUserRoleID(userToken);
 
@@ -721,19 +732,19 @@ sendmailtls
     		return "{\"ranking\": []}";
 
 		if (forIndividualUser){
-			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Make sure the user is not hacking in another person's ID by sending in userID
+			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Validate 'userID'.  Make sure the user is not hacking in another person's ID by sending in userID
 				return "{\"ranking\": []}";
 		    else
-                return _getCorpValues(corpID, gr, userID, true, null);
+                return _getCorpValues(corpID, gr, valueID, userID, true, null);
         }
 		else if (userRoleID.equals("301")){
-            return _getCorpValues (corpID, gr, null, false, getUserDeptID(userToken));
+            return _getCorpValues (corpID, gr, valueID, null, false, getUserDeptID(userToken));
 		}
 		else{
 			if (!validUserAndLevel(corpID, userToken, null,"201"))
 				return "{\"ranking\": []}";
 		    else
-                return _getCorpValues(corpID, gr, userID, false, null);
+                return _getCorpValues(corpID, gr, valueID, userID, false, null);
 		}
     }
 
@@ -746,7 +757,7 @@ sendmailtls
         DecimalFormat formatter = new DecimalFormat("#0.00");
         boolean forIndividualUser = (userID != null && !userID.isEmpty());*/
 
-    public String _getCorpValues(String corpID, String gr, String userID, boolean forIndividualUser, String deptID){
+    public String _getCorpValues(String corpID, String gr, String valueID, String userID, boolean forIndividualUser, String deptID){
 		
         //Get the list of all the employees in the corporation
 /*        List<Member> members = em.createNamedQuery(Member.FIND_ALL_BY_CORPID, Member.class)
@@ -792,11 +803,11 @@ sendmailtls
 
         for (int i=0; i < members.size(); i++) {
             if (gr.equals("giv")){
-                rank = _giverValuesRanking(corpID, members.get(i).getId());
+                rank = _giverValuesRanking(corpID, members.get(i).getId(), valueID);
                 }
             else if (gr.equals("rcv")){
 //                rank = _ReceiverValuesRanking(corpID, members.get(i).getId(), values);
-                rank = _ReceiverValuesRanking(corpID, members.get(i).getId());
+                rank = _ReceiverValuesRanking(corpID, members.get(i).getId(), valueID);
             }
 
             users.add(new IdUserNameValue(members.get(i).getId(), members.get(i).getnameFirst(), members.get(i).getnameMiddle(),
