@@ -717,7 +717,45 @@ sendmailtls
     public String getCorpValuesDept(@PathParam("corpID") String corpID, @PathParam("corpID") String userToken, @PathParam("gr") String gr, @PathParam("deptID") String deptID) {
         return _getCorpValues (corpID, gr, null, false, deptID);
     }*/
+	
+	
+	
+    /*------------------------*/
+	public String _getCorpValuesForIndividual(String corpID, String gr, String userID){
+		try{
+			TUComposite activeTuComposite = em.createNamedQuery(TUComposite.FIND_ACTIVE_BY_CORPID, TUComposite.class).setParameter("corpID", corpID).getSingleResult();
 
+			List<Object[]> tus = em.createNamedQuery(TU.FIND_ALL_BY_TUCOMPOSITEID_JOIN)
+												.setParameter("tucompositeid", activeTuComposite.getId())
+												.getResultList();	 
+			
+			java.util.ArrayList<IdUserNameValue> valueRanking = new java.util.ArrayList<>();
+
+			for (int i=0; i<tus.size(); i++){
+				String rank = _getCorpValues(corpID, gr, tus.get(i)[1].toString(), userID, true, null);
+				valueRanking.add(new IdUserNameValue(tus.get(i)[1].toString(), tus.get(i)[3].toString(), "", "", Double.parseDouble(rank)));				
+			}
+
+	        String retStr="{\"ranking\": [";
+
+            for (IdUserNameValue valueRank: valueRanking){
+				retStr += "{\"ID\": \"" + valueRank.getId() +
+					   "\", \"valueName\": \"" + valueRank.getNameFirst() +
+					   "\", \"rank\": \"" + Math.round(valueRank.getValue()) + "\"},\n";
+            }
+            if (valueRanking.size() != 0) retStr = retStr.substring(0, retStr.length()-2); //remove the last extra comma and lf
+            retStr += "]}";
+			
+			return retStr;
+		
+		} catch (NoResultException pe) {
+			return "{\"ranking\": []}";
+		} catch (PersistenceException pe) {
+			return "FAIL: " + pe.getMessage();
+		}
+		
+	}
+	
     /*------------------------*/
 
     @GET
@@ -735,10 +773,10 @@ sendmailtls
 			if (!validUserAndLevel(corpID, userToken, userID,"401"))            //Validate 'userID'.  Make sure the user is not hacking in another person's ID by sending in userID
 				return "{\"ranking\": []}";
 		    else
-                return _getCorpValues(corpID, gr, valueID, userID, true, null);
+				return _getCorpValuesForIndividual(corpID, gr, userID);
         }
 		else if (userRoleID.equals("301")){
-            return _getCorpValues (corpID, gr, valueID, null, false, getUserDeptID(userToken));
+            return _getCorpValues (corpID, gr, valueID, null, false, getUserDeptID(userToken));			//Restrict to own department only
 		}
 		else{
 			if (!validUserAndLevel(corpID, userToken, null,"201"))
@@ -818,13 +856,13 @@ sendmailtls
 
         if (forIndividualUser){
         IdUserNameValue user = _getPercentRank(users, userID);
-
-            retStr += "{\"ID\": \"" + user.getId() +
+				retStr = String.valueOf(Math.round(user.getValue()));
+/*             retStr += "{\"ID\": \"" + user.getId() +
                        "\", \"nameFirst\": \"" + user.getNameFirst() +
                        "\", \"nameMiddle\": \"" + user.getNameMiddle() +
                        "\", \"nameLast\": \"" + user.getNameLast() +
                        "\", \"rank\": \"" + Math.round(user.getValue()) + "\"}";
-            retStr += "]}";
+            retStr += "]}"; */
         }
         else {
             for (int i=0; i<users.size(); i++){
