@@ -730,7 +730,7 @@ sendmailtls
 												.getResultList();	 
 			
 			java.util.ArrayList<IdUserNameValue> valueRanking = new java.util.ArrayList<>();
-
+			
 			for (int i=0; i<tus.size(); i++){
 				String rank = _getCorpValues(corpID, gr, tus.get(i)[1].toString(), userID, true, null);
 				valueRanking.add(new IdUserNameValue(tus.get(i)[1].toString(), tus.get(i)[3].toString(), "", "", Double.parseDouble(rank)));				
@@ -865,14 +865,17 @@ sendmailtls
             retStr += "]}"; */
         }
         else {
-            for (int i=0; i<users.size(); i++){
-                if (deptUserIds.contains(users.get(i).getId()) || deptID == null){         //if deptID != null then restricted by dept(dept admin).  if null then return all(corp admin).
+			double corpGivingAvg = getAvgGiving(corpID).doubleValue();
+			DecimalFormat formatter = new DecimalFormat("#0.00");
+//            for (int i=0; i<users.size(); i++){
+            for (IdUserNameValue user: users){
+                if (deptUserIds.contains(user.getId()) || deptID == null){         //if deptID != null then restricted by dept(dept admin).  if null then return all(corp admin).
 //                    IdUserNameValue user = _getPercentRank(users, users.get(i).getId());   //Have to do it this way instead of in via db joins since measuring dept members against all corp employees
-                    retStr += "{\"ID\": \"" + users.get(i).getId() +
-                           "\", \"nameFirst\": \"" + users.get(i).getNameFirst() +
-                           "\", \"nameMiddle\": \"" + users.get(i).getNameMiddle() +
-                           "\", \"nameLast\": \"" + users.get(i).getNameLast() +
-                           "\", \"rank\": \"" + Math.round(users.get(i).getValue()) + "\"},\n";
+                    retStr += "{\"ID\": \"" + user.getId() +
+                           "\", \"nameFirst\": \"" + user.getNameFirst() +
+                           "\", \"nameMiddle\": \"" + user.getNameMiddle() +
+                           "\", \"nameLast\": \"" + user.getNameLast() +
+                           "\", \"rank\": \"" + formatter.format(user.getValue()/corpGivingAvg) + "\"},\n";
 //                           "\", \"rank\": \"" + Math.round(users.get(i).getValue()) + "\"},\n";
 //                if (i+1 != users.size())
 //                    retStr += ", \n";
@@ -1385,12 +1388,13 @@ sendmailtls
     public String test() {
         String retStr = "";
 
-/*         double avg = getAvgGiving("1").doubleValue();
+        double avg = getAvgGiving("1").doubleValue();
         retStr = "getAvgGiving = " + Double.toString(avg);
         avg = getGeneralsAvg("1");
-        retStr += "\n getGeneralAvg = " + Double.toString(avg); */
+        retStr += "\n getGeneralAvg = " + Double.toString(avg);
 
-    byte[] encodedBytes = Base64.getEncoder().encode("Test".getBytes());
+		byte[] encodedBytes = Base64.getEncoder().encode("Test".getBytes());
+		retStr += "\n encodedBytes(\"Test\") = " + (new String(encodedBytes));
 
 /*
     if (validUserAndLevel("1","L0tra3RsRkVhVlJMM0hMV0QyY1JIZko0", "401"))
