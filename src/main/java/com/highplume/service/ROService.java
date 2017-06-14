@@ -867,12 +867,12 @@ sendmailtls
         else {
             for (int i=0; i<users.size(); i++){
                 if (deptUserIds.contains(users.get(i).getId()) || deptID == null){         //if deptID != null then restricted by dept(dept admin).  if null then return all(corp admin).
-                    IdUserNameValue user = _getPercentRank(users, users.get(i).getId());   //Have to do it this way instead of in via db joins since measuring dept members against all corp employees
-                    retStr += "{\"ID\": \"" + user.getId() +
-                           "\", \"nameFirst\": \"" + user.getNameFirst() +
-                           "\", \"nameMiddle\": \"" + user.getNameMiddle() +
-                           "\", \"nameLast\": \"" + user.getNameLast() +
-                           "\", \"rank\": \"" + Math.round(user.getValue()) + "\"},\n";
+//                    IdUserNameValue user = _getPercentRank(users, users.get(i).getId());   //Have to do it this way instead of in via db joins since measuring dept members against all corp employees
+                    retStr += "{\"ID\": \"" + users.get(i).getId() +
+                           "\", \"nameFirst\": \"" + users.get(i).getNameFirst() +
+                           "\", \"nameMiddle\": \"" + users.get(i).getNameMiddle() +
+                           "\", \"nameLast\": \"" + users.get(i).getNameLast() +
+                           "\", \"rank\": \"" + Math.round(users.get(i).getValue()) + "\"},\n";
 //                           "\", \"rank\": \"" + Math.round(users.get(i).getValue()) + "\"},\n";
 //                if (i+1 != users.size())
 //                    retStr += ", \n";
@@ -881,7 +881,6 @@ sendmailtls
             if (users.size() != 0) retStr = retStr.substring(0, retStr.length()-2); //remove the last extra comma and lf
             retStr += "]}";
         }
-
 
         return retStr;
     }
