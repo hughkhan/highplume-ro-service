@@ -3,6 +3,7 @@ package com.highplume.service;
 import org.eclipse.persistence.config.CacheUsage;
 import org.eclipse.persistence.config.QueryHints;
 
+
 import javax.ejb.Stateless;
 import javax.persistence.*;
 import javax.ws.rs.*;
@@ -10,13 +11,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.*;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.text.DecimalFormat;
 import java.util.*;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 
 //import java.util.*;
 //import javax.mail.*;
@@ -49,11 +48,39 @@ public class ROService {
   @Context
   private UriInfo uriInfo;
 
+  String logFile = "c:/highplume.log";
+  String logTrigger = "c:/log.trigger";
   // ======================================
   // =           Public Methods           =
   // ======================================
 
 
+        /*--------------------------*/
+
+    public void log (String output){
+//        String path = ROService.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+//        String decodedPath = "";
+//        try{
+//            decodedPath = URLDecoder.decode(path, "UTF-8");
+//        }catch (UnsupportedEncodingException e){
+//             e.printStackTrace();
+//        }
+        File f = new File(logTrigger);
+        if(f.exists()) {
+            Calendar calendar = Calendar.getInstance();
+            java.util.Date now = calendar.getTime();
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(logFile, true))) {
+                bw.write(now.toString() + ":" + output);
+                bw.newLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    /*-----------------------------*/
 
   /**
    * JSON : curl -X GET -H "Accept: application/json" http://localhost:8080/chapter15-service-1.0/rs/members -v
@@ -1796,34 +1823,40 @@ test.setId("1");
 	try{
         byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
         String userToken = new String(decodedPWD);
-
+log("validUserAndLevel:userToken: " + userToken);
 		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
 		Integer minLevelIntValue = Integer.valueOf(minLevel);
 		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
 
 		if (userID != null)
-		    if (!(member.getId().equals(userID)))
+		    if (!(member.getId().equals(userID))){
+log("validUserAndLevel:userID != member.Id");
                 return false;                           //ID did not match record pulled up using userToken.  Possible hack.
-
+}
 		if (CorpID.equals(member.getCorpID())){
 			if (userRoleIntValue <= minLevelIntValue)
 				return true;
-			else
+			else{
+log("validUserAndLevel:minLevel fail");
 				return false;
+}
 		}
 		else
 		{
+log("validUserAndLevel:corpID != member.corpID");
 			return false;
 		}
  	} catch (NoResultException pe) {
+log("validUserAndLevel:NoResultException: " + pe.getMessage());
             return false;
     } catch  (PersistenceException pe){
+log("validUserAndLevel:PersistenceException: " + pe.getMessage());
             return false;
     } catch (Exception e){
+log("validUserAndLevel:Exception: " + e.getMessage());
             return false;
     }
   }
-
 
     /*--------------------------*/
 /*
