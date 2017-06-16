@@ -31,6 +31,7 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import com.highplume.common.*;
 //@formatter:off
 
 @Path("/")
@@ -48,30 +49,40 @@ public class ROService {
   @Context
   private UriInfo uriInfo;
 
-  String logFile = "c:/highplume.log";
-  String logTrigger = "c:/log.trigger";
+  String logFile = "highplumeROService.log";
+  String logTrigger = "highplumelog.trigger";
   // ======================================
   // =           Public Methods           =
   // ======================================
 
 
         /*--------------------------*/
-
+		
     public void log (String output){
+		log(output, 0);
+	}
+		
+
+    public void log (String output, int logLevel){
 //        String path = ROService.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-//        String decodedPath = "";
-//        try{
-//            decodedPath = URLDecoder.decode(path, "UTF-8");
-//        }catch (UnsupportedEncodingException e){
-//             e.printStackTrace();
-//        }
-        File f = new File(logTrigger);
-        if(f.exists()) {
+		File f1 = new File("."); 				// f is the current directory; where the JVM was launched  => C:\Users\Latitude Owner\Documents\payara41\glassfish\domains\domain1\config\.
+		String path = f1.getAbsolutePath();
+        String decodedPath = "";
+        try{
+            decodedPath = URLDecoder.decode(path, "UTF-8");
+        }catch (UnsupportedEncodingException e){
+             e.printStackTrace();
+        } 
+
+		decodedPath = decodedPath.substring(0, decodedPath.indexOf("config")) + "logs\\";
+		
+        File f = new File(decodedPath+logTrigger);				//if logTrigger file exists, log everything.  Otherwise only log level 0 stuff.
+        if(f.exists() || logLevel == 0) {
             Calendar calendar = Calendar.getInstance();
             java.util.Date now = calendar.getTime();
 
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(logFile, true))) {
-                bw.write(now.toString() + ":" + output);
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(decodedPath+logFile, true))) {
+                bw.write(decodedPath+"---"+now.toString() + ":" + output);
                 bw.newLine();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -1822,38 +1833,38 @@ test.setId("1");
   public boolean validUserAndLevel(String CorpID, String userTokenBase64, String userID, String minLevel) {  //userID='id' in member table
 	try{
         byte[] decodedPWD = Base64.getDecoder().decode(userTokenBase64.getBytes());
-        String userToken = new String(decodedPWD);
-log("validUserAndLevel:userToken: " + userToken);
+        String userToken = new String(decodedPWD); log("validUserAndLevel:userToken: " + userToken,1);
+		
 		Member member = em.createNamedQuery(Member.FIND_BY_PWD, Member.class).setParameter("pwd",userToken).getSingleResult();
 		Integer minLevelIntValue = Integer.valueOf(minLevel);
 		Integer userRoleIntValue = Integer.valueOf(member.getRoleID());
 
 		if (userID != null)
 		    if (!(member.getId().equals(userID))){
-log("validUserAndLevel:userID != member.Id");
+				log("validUserAndLevel:userID != member.Id");
                 return false;                           //ID did not match record pulled up using userToken.  Possible hack.
-}
+			}
 		if (CorpID.equals(member.getCorpID())){
 			if (userRoleIntValue <= minLevelIntValue)
 				return true;
 			else{
-log("validUserAndLevel:minLevel fail");
+				log("validUserAndLevel:minLevel fail");
 				return false;
-}
+			}
 		}
 		else
 		{
-log("validUserAndLevel:corpID != member.corpID");
+			log("validUserAndLevel:corpID != member.corpID");
 			return false;
 		}
  	} catch (NoResultException pe) {
-log("validUserAndLevel:NoResultException: " + pe.getMessage());
+			log("validUserAndLevel:NoResultException: " + pe.getMessage());
             return false;
     } catch  (PersistenceException pe){
-log("validUserAndLevel:PersistenceException: " + pe.getMessage());
+			log("validUserAndLevel:PersistenceException: " + pe.getMessage());
             return false;
     } catch (Exception e){
-log("validUserAndLevel:Exception: " + e.getMessage());
+			log("validUserAndLevel:Exception: " + e.getMessage());
             return false;
     }
   }
