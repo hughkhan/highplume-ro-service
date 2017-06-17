@@ -12,8 +12,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.io.*;
-import java.net.URI;
-import java.net.URLDecoder;
+//import java.net.URI;
+//import java.net.URLDecoder;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -50,49 +50,26 @@ public class ROService {
   @Context
   private UriInfo uriInfo;
 
-  String logFile = "highplumeROService.log";
-  String logTrigger = "highplumelog.trigger";
+  String pfx = "RO-";    //logFile = "RO-highplumeROService.log";
+
   // ======================================
   // =           Public Methods           =
   // ======================================
 
+    /*-----------------------------*/
 
-        /*--------------------------*/
-		
-    public void log (String output){
-		log(output, 0);
+	public void log (String output){
+		Util.log("RO-", output);
 	}
-		
-
-    public void log (String output, int logLevel){
-//        String path = ROService.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-		File f1 = new File("."); 				// f is the current directory; where the JVM was launched  => C:\Users\Latitude Owner\Documents\payara41\glassfish\domains\domain1\config\.
-		String path = f1.getAbsolutePath();
-        String decodedPath = "";
-        try{
-            decodedPath = URLDecoder.decode(path, "UTF-8");
-        }catch (UnsupportedEncodingException e){
-             e.printStackTrace();
-        } 
-
-		decodedPath = decodedPath.substring(0, decodedPath.indexOf("config")) + "logs\\";
-		
-        File f = new File(decodedPath+logTrigger);				//if logTrigger file exists, log everything.  Otherwise only log level 0 stuff.
-        if(f.exists() || logLevel == 0) {
-            Calendar calendar = Calendar.getInstance();
-            java.util.Date now = calendar.getTime();
-
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(decodedPath+logFile, true))) {
-                bw.write(decodedPath+"---"+now.toString() + ":" + output);
-                bw.newLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
 
     /*-----------------------------*/
+
+	public void log (String output, int logLevel){
+		Util.log("RO-", output, logLevel);
+	}
+
+    /*-----------------------------*/
+
 
   /**
    * JSON : curl -X GET -H "Accept: application/json" http://localhost:8080/chapter15-service-1.0/rs/members -v
